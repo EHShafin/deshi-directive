@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useFileUpload, UploadedFile } from "@/hooks/use-file-upload";
 import {
 	Select,
 	SelectContent,
@@ -42,6 +44,7 @@ import {
 	ShieldCheck,
 	Building,
 	Clock,
+	Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -75,6 +78,7 @@ export default function SignUp() {
 	const [businessPhone, setBusinessPhone] = useState("");
 	const [businessHours, setBusinessHours] = useState("");
 	const [description, setDescription] = useState("");
+	const [profilePicture, setProfilePicture] = useState("");
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
@@ -84,6 +88,31 @@ export default function SignUp() {
 
 	const { login } = useAuth();
 	const router = useRouter();
+
+	// File upload hook
+	const {
+		uploadFiles,
+		isUploading: isUploadingProfile,
+		uploadedFiles,
+	} = useFileUpload({
+		folder: "profile_pictures",
+		maxFiles: 1,
+		acceptedFileTypes: ["image/jpeg", "image/png", "image/webp"],
+		maxFileSize: 2 * 1024 * 1024, // 2MB
+		onUploadComplete: (files: UploadedFile[]) => {
+			if (files.length > 0) {
+				setProfilePicture(files[0].secure_url);
+				setErrors((prev) => ({ ...prev, profilePicture: "" }));
+			}
+		},
+		onUploadError: (error: string) => {
+			toast.error(error);
+			setErrors((prev) => ({
+				...prev,
+				profilePicture: "Failed to upload profile picture",
+			}));
+		},
+	});
 
 	const userTypes = [
 		{
@@ -243,7 +272,13 @@ export default function SignUp() {
 		setIsLoading(true);
 
 		try {
-			const requestData: any = { name, email, password, userType };
+			const requestData: any = {
+				name,
+				email,
+				password,
+				userType,
+				profilePicture,
+			};
 
 			if (["veteran", "local_shop", "restaurant"].includes(userType)) {
 				requestData.place = place;
@@ -453,6 +488,77 @@ export default function SignUp() {
 								{errors.name && (
 									<p className="text-sm text-destructive">
 										{errors.name}
+									</p>
+								)}
+							</div>
+
+							<div className="space-y-2">
+								<Label>Profile Picture</Label>
+								<div className="flex items-center gap-4">
+									<div className="border rounded-full overflow-hidden w-16 h-16 flex-shrink-0 bg-muted">
+										<Avatar className="w-16 h-16">
+											{profilePicture ? (
+												<AvatarImage
+													src={profilePicture}
+													alt="Profile preview"
+												/>
+											) : (
+												<AvatarFallback className="text-lg">
+													{name
+														? name
+																.charAt(0)
+																.toUpperCase()
+														: "U"}
+												</AvatarFallback>
+											)}
+										</Avatar>
+									</div>
+									<div className="flex-1">
+										<Button
+											type="button"
+											variant="outline"
+											className="w-full"
+											disabled={
+												isUploadingProfile || isLoading
+											}
+											onClick={() => {
+												const input =
+													document.createElement(
+														"input"
+													);
+												input.type = "file";
+												input.accept =
+													"image/jpeg,image/png,image/webp";
+												input.onchange = (e) => {
+													const target =
+														e.target as HTMLInputElement;
+													if (
+														target.files &&
+														target.files.length > 0
+													) {
+														uploadFiles(
+															Array.from(
+																target.files
+															)
+														);
+													}
+												};
+												input.click();
+											}}
+										>
+											<Upload className="mr-2 h-4 w-4" />
+											{isUploadingProfile
+												? "Uploading..."
+												: "Upload Photo"}
+										</Button>
+										<p className="text-xs text-muted-foreground mt-1">
+											JPEG, PNG or WebP, max 2MB
+										</p>
+									</div>
+								</div>
+								{errors.profilePicture && (
+									<p className="text-sm text-destructive">
+										{errors.profilePicture}
 									</p>
 								)}
 							</div>

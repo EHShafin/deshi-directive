@@ -4,12 +4,13 @@ import User from "@/models/User";
 
 export async function GET(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
 		await dbConnect();
 
-		const user = await User.findById(params.id)
+		const { id } = await params;
+		const user = await User.findById(id)
 			.select("-password -email")
 			.populate("place", "name city state country");
 

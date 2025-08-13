@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { Save, X } from "lucide-react";
 import { toast } from "sonner";
+import { ProfilePictureUpload } from "@/components/ui/profile-picture-upload";
 
 interface AdminEditProps {
 	user: {
@@ -25,6 +26,7 @@ interface AdminEditProps {
 		name: string;
 		email: string;
 		userType: "local_admin" | "admin";
+		profilePicture?: string;
 	};
 	onSave: (updatedUser: any) => void;
 	onCancel: () => void;
@@ -36,6 +38,7 @@ const adminSchema = z
 		currentPassword: z.string().optional(),
 		newPassword: z.string().optional(),
 		confirmPassword: z.string().optional(),
+		profilePicture: z.string().optional(),
 	})
 	.refine(
 		(data) => {
@@ -69,6 +72,9 @@ export default function AdminEditForm({
 }: AdminEditProps) {
 	const [isLoading, setIsLoading] = useState(false);
 	const { login } = useAuth();
+	const [profilePicture, setProfilePicture] = useState<string | undefined>(
+		user.profilePicture
+	);
 
 	const isGlobalAdmin = user.userType === "admin";
 
@@ -79,6 +85,7 @@ export default function AdminEditForm({
 			currentPassword: "",
 			newPassword: "",
 			confirmPassword: "",
+			profilePicture: user.profilePicture || "",
 		},
 	});
 
@@ -87,6 +94,7 @@ export default function AdminEditForm({
 		try {
 			const updateData: any = {
 				name: data.name,
+				profilePicture: profilePicture,
 			};
 
 			if (data.newPassword && data.currentPassword) {
@@ -149,6 +157,16 @@ export default function AdminEditForm({
 									<FormMessage />
 								</FormItem>
 							)}
+						/>
+
+						<ProfilePictureUpload
+							profilePicture={profilePicture}
+							name={form.getValues("name")}
+							onImageUploaded={(url) => {
+								setProfilePicture(url);
+								form.setValue("profilePicture", url);
+							}}
+							disabled={isLoading}
 						/>
 
 						<div className="space-y-4 pt-4 border-t">

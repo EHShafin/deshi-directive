@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import ProfileDisplay from "@/components/ProfileDisplay";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -32,6 +34,7 @@ interface UserProfile {
 	businessHours?: string;
 	description?: string;
 	createdAt?: string;
+	profilePicture?: string;
 }
 
 export default function UserProfile() {
@@ -39,6 +42,8 @@ export default function UserProfile() {
 	const [user, setUser] = useState<UserProfile | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [rating, setRating] = useState<number>(5);
+	const [comment, setComment] = useState<string>("");
 
 	useEffect(() => {
 		const fetchUser = async () => {
@@ -116,6 +121,47 @@ export default function UserProfile() {
 				</div>
 
 				<ProfileDisplay user={user} isOwnProfile={false} />
+
+				{["local_shop", "restaurant"].includes(user.userType) && (
+					<div className="mt-6 border rounded-lg p-4 space-y-3">
+						<h2 className="text-lg font-semibold">
+							Leave Feedback
+						</h2>
+						<div className="flex items-center gap-2">
+							<span className="text-sm">Rating</span>
+							<Input
+								type="number"
+								min={1}
+								max={5}
+								className="w-24"
+								value={rating}
+								onChange={(e) =>
+									setRating(parseInt(e.target.value || "5"))
+								}
+							/>
+						</div>
+						<Textarea
+							placeholder="Comment (optional)"
+							value={comment}
+							onChange={(e) => setComment(e.target.value)}
+						/>
+						<Button
+							onClick={async () => {
+								await fetch(`/api/users/${user.id}/feedback`, {
+									method: "POST",
+									headers: {
+										"Content-Type": "application/json",
+									},
+									body: JSON.stringify({ rating, comment }),
+								});
+								setRating(5);
+								setComment("");
+							}}
+						>
+							Submit
+						</Button>
+					</div>
+				)}
 			</div>
 		</div>
 	);

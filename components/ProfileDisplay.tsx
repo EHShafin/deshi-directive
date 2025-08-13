@@ -31,6 +31,7 @@ interface UserProfile {
 	businessHours?: string;
 	description?: string;
 	createdAt?: string;
+	profilePicture?: string;
 }
 
 interface ProfileDisplayProps {

@@ -3,6 +3,7 @@
 import { Shield, Mail, MapPin, Calendar, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface AdminProfileProps {
 	user: {
@@ -18,6 +19,7 @@ interface AdminProfileProps {
 			country: string;
 		};
 		createdAt?: string;
+		profilePicture?: string;
 	};
 	isOwnProfile?: boolean;
 }
@@ -52,9 +54,20 @@ export default function AdminProfile({
 			<CardHeader>
 				<div className="flex items-center justify-between">
 					<CardTitle className="flex items-center gap-3">
-						<div className={`p-2 ${iconBg} rounded-full`}>
-							<Shield className={`h-6 w-6 ${iconColor}`} />
-						</div>
+						<Avatar className={`h-12 w-12 border-2 ${iconBg}`}>
+							{user.profilePicture ? (
+								<AvatarImage
+									src={user.profilePicture}
+									alt={user.name}
+								/>
+							) : (
+								<AvatarFallback
+									className={`${iconBg} ${iconColor}`}
+								>
+									{user.name.charAt(0).toUpperCase()}
+								</AvatarFallback>
+							)}
+						</Avatar>
 						{user.name}
 					</CardTitle>
 					<Badge className={badgeColor}>

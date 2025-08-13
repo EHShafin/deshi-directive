@@ -19,6 +19,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { Save, X } from "lucide-react";
 import { toast } from "sonner";
+import { ProfilePictureUpload } from "@/components/ui/profile-picture-upload";
 
 interface BusinessEditProps {
 	user: {
@@ -32,6 +33,7 @@ interface BusinessEditProps {
 		businessAddress?: string;
 		businessPhone?: string;
 		businessHours?: string;
+		profilePicture?: string;
 	};
 	onSave: (updatedUser: any) => void;
 	onCancel: () => void;
@@ -59,6 +61,7 @@ const businessSchema = z
 		currentPassword: z.string().optional(),
 		newPassword: z.string().optional(),
 		confirmPassword: z.string().optional(),
+		profilePicture: z.string().optional(),
 	})
 	.refine(
 		(data) => {
@@ -92,6 +95,9 @@ export default function BusinessEditForm({
 }: BusinessEditProps) {
 	const [isLoading, setIsLoading] = useState(false);
 	const { login } = useAuth();
+	const [profilePicture, setProfilePicture] = useState<string | undefined>(
+		user.profilePicture
+	);
 
 	const isRestaurant = user.userType === "restaurant";
 
@@ -108,6 +114,7 @@ export default function BusinessEditForm({
 			currentPassword: "",
 			newPassword: "",
 			confirmPassword: "",
+			profilePicture: user.profilePicture || "",
 		},
 	});
 
@@ -122,6 +129,7 @@ export default function BusinessEditForm({
 				businessAddress: data.businessAddress,
 				businessPhone: data.businessPhone,
 				businessHours: data.businessHours,
+				profilePicture: profilePicture,
 			};
 
 			if (data.newPassword && data.currentPassword) {
@@ -205,6 +213,16 @@ export default function BusinessEditForm({
 										<FormMessage />
 									</FormItem>
 								)}
+							/>
+
+							<ProfilePictureUpload
+								profilePicture={profilePicture}
+								name={form.getValues("name")}
+								onImageUploaded={(url) => {
+									setProfilePicture(url);
+									form.setValue("profilePicture", url);
+								}}
+								disabled={isLoading}
 							/>
 						</div>
 

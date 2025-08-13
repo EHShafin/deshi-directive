@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import { encode } from "next-auth/jwt";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import Place from "@/models/Place";
@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
 			businessPhone,
 			businessHours,
 			description,
+			profilePicture,
 		} = await request.json();
 
 		if (!name || !email || !password || !userType) {
@@ -157,6 +158,7 @@ export async function POST(request: NextRequest) {
 		if (businessPhone) userData.businessPhone = businessPhone;
 		if (businessHours) userData.businessHours = businessHours;
 		if (description) userData.description = description;
+		if (profilePicture) userData.profilePicture = profilePicture;
 
 		const user = await User.create(userData);
 		const populatedUser = await User.findById(user._id).populate(
@@ -164,8 +166,9 @@ export async function POST(request: NextRequest) {
 			"name city state country"
 		);
 
-		const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET!, {
-			expiresIn: "7d",
+		const token = await encode({
+			token: { userId: user._id, userType: user.userType },
+			secret: process.env.JWT_SECRET!,
 		});
 
 		const response = NextResponse.json(
@@ -184,6 +187,7 @@ export async function POST(request: NextRequest) {
 					businessPhone: populatedUser.businessPhone,
 					businessHours: populatedUser.businessHours,
 					description: populatedUser.description,
+					profilePicture: populatedUser.profilePicture,
 				},
 			},
 			{ status: 201 }

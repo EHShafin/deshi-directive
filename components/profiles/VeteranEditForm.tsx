@@ -19,6 +19,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { Save, X } from "lucide-react";
 import { toast } from "sonner";
+import { ProfilePictureUpload } from "@/components/ui/profile-picture-upload";
 
 interface VeteranEditProps {
 	user: {
@@ -27,6 +28,7 @@ interface VeteranEditProps {
 		email: string;
 		phone?: string;
 		description?: string;
+		profilePicture?: string;
 	};
 	onSave: (updatedUser: any) => void;
 	onCancel: () => void;
@@ -44,6 +46,7 @@ const veteranSchema = z
 		currentPassword: z.string().optional(),
 		newPassword: z.string().optional(),
 		confirmPassword: z.string().optional(),
+		profilePicture: z.string().optional(),
 	})
 	.refine(
 		(data) => {
@@ -77,6 +80,9 @@ export default function VeteranEditForm({
 }: VeteranEditProps) {
 	const [isLoading, setIsLoading] = useState(false);
 	const { login } = useAuth();
+	const [profilePicture, setProfilePicture] = useState<string | undefined>(
+		user.profilePicture
+	);
 
 	const form = useForm({
 		resolver: zodResolver(veteranSchema),
@@ -87,6 +93,7 @@ export default function VeteranEditForm({
 			currentPassword: "",
 			newPassword: "",
 			confirmPassword: "",
+			profilePicture: user.profilePicture || "",
 		},
 	});
 
@@ -97,6 +104,7 @@ export default function VeteranEditForm({
 				name: data.name,
 				phone: data.phone,
 				description: data.description,
+				profilePicture: profilePicture,
 			};
 
 			if (data.newPassword && data.currentPassword) {
@@ -191,6 +199,16 @@ export default function VeteranEditForm({
 									<FormMessage />
 								</FormItem>
 							)}
+						/>
+
+						<ProfilePictureUpload
+							profilePicture={profilePicture}
+							name={form.getValues("name")}
+							onImageUploaded={(url) => {
+								setProfilePicture(url);
+								form.setValue("profilePicture", url);
+							}}
+							disabled={isLoading}
 						/>
 
 						<div className="space-y-4 pt-4 border-t">

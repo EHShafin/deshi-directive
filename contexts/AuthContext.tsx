@@ -27,6 +27,7 @@ interface User {
 	businessPhone?: string;
 	businessHours?: string;
 	description?: string;
+	profilePicture?: string;
 }
 
 interface AuthContextType {

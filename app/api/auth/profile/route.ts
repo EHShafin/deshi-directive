@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+import { decode } from "next-auth/jwt";
 import bcrypt from "bcrypt";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
@@ -15,9 +15,19 @@ export async function PUT(request: NextRequest) {
 			);
 		}
 
-		const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+		const decoded = (await decode({
+			token,
+			secret: process.env.JWT_SECRET!,
+		})) as {
 			userId: string;
 		};
+
+		if (!decoded) {
+			return NextResponse.json(
+				{ error: "Invalid token" },
+				{ status: 401 }
+			);
+		}
 
 		await dbConnect();
 		const user = await User.findById(decoded.userId);
@@ -41,6 +51,8 @@ export async function PUT(request: NextRequest) {
 			description,
 			currentPassword,
 			newPassword,
+			profilePicture,
+			place,
 		} = body;
 
 		if (newPassword && currentPassword) {
@@ -68,6 +80,8 @@ export async function PUT(request: NextRequest) {
 		if (businessPhone !== undefined) user.businessPhone = businessPhone;
 		if (businessHours !== undefined) user.businessHours = businessHours;
 		if (description !== undefined) user.description = description;
+		if (profilePicture !== undefined) user.profilePicture = profilePicture;
+		if (place !== undefined) user.place = place;
 
 		await user.save();
 
@@ -90,6 +104,7 @@ export async function PUT(request: NextRequest) {
 					businessPhone: updatedUser.businessPhone,
 					businessHours: updatedUser.businessHours,
 					description: updatedUser.description,
+					profilePicture: updatedUser.profilePicture,
 				},
 			},
 			{ status: 200 }

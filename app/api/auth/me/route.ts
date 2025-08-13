@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+import { decode } from "next-auth/jwt";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
+
+export const config = {
+	runtime: "nodejs",
+};
 
 export async function GET(request: NextRequest) {
 	try {
@@ -14,9 +18,19 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+		const decoded = (await decode({
+			token,
+			secret: process.env.JWT_SECRET!,
+		})) as {
 			userId: string;
 		};
+
+		if (!decoded) {
+			return NextResponse.json(
+				{ error: "Invalid token" },
+				{ status: 401 }
+			);
+		}
 
 		await dbConnect();
 		const user = await User.findById(decoded.userId)

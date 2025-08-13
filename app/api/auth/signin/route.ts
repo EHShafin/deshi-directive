@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import { encode } from "next-auth/jwt";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import Place from "@/models/Place";
@@ -47,8 +47,9 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET!, {
-			expiresIn: "7d",
+		const token = await encode({
+			token: { userId: user._id, userType: user.userType },
+			secret: process.env.JWT_SECRET!,
 		});
 
 		const response = NextResponse.json(

@@ -3,6 +3,7 @@
 import { User, Mail, MapPin, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface NewbieProfileProps {
 	user: {
@@ -17,6 +18,7 @@ interface NewbieProfileProps {
 			country: string;
 		};
 		createdAt?: string;
+		profilePicture?: string;
 	};
 	isOwnProfile?: boolean;
 }
@@ -39,9 +41,18 @@ export default function NewbieProfile({
 			<CardHeader>
 				<div className="flex items-center justify-between">
 					<CardTitle className="flex items-center gap-3">
-						<div className="p-2 bg-blue-100 rounded-full">
-							<User className="h-6 w-6 text-blue-600" />
-						</div>
+						<Avatar className="h-12 w-12 border-2 border-blue-100">
+							{user.profilePicture ? (
+								<AvatarImage
+									src={user.profilePicture}
+									alt={user.name}
+								/>
+							) : (
+								<AvatarFallback className="bg-blue-100 text-blue-600">
+									{user.name.charAt(0).toUpperCase()}
+								</AvatarFallback>
+							)}
+						</Avatar>
 						{user.name}
 					</CardTitle>
 					<Badge className="bg-blue-100 text-blue-800">

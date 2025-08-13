@@ -21,6 +21,7 @@ export interface IUser extends mongoose.Document {
 	businessPhone?: string;
 	businessHours?: string;
 	description?: string;
+	profilePicture?: string;
 	isActive: boolean;
 	createdAt: Date;
 }
@@ -132,6 +133,11 @@ const UserSchema = new mongoose.Schema({
 			return ["veteran"].includes(this.userType);
 		},
 		minLength: [10, "Description must be at least 10 characters long"],
+	},
+	profilePicture: {
+		type: String,
+		default:
+			"https://res.cloudinary.com/deshidirective/image/upload/v1/defaults/default-profile",
 	},
 	isActive: {
 		type: Boolean,
