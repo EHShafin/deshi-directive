@@ -29,6 +29,17 @@ export default function FeedbackPage() {
 					<Card key={f.id}>
 						<CardContent className="py-4">
 							<div className="flex items-center justify-between">
+								<div>
+									{f.user ? (
+										<span className="text-sm font-medium">
+											{f.user.name}
+										</span>
+									) : (
+										<span className="text-sm text-muted-foreground">
+											Anonymous
+										</span>
+									)}
+								</div>
 								<span>
 									{"★".repeat(f.rating)}
 									{"☆".repeat(5 - f.rating)}

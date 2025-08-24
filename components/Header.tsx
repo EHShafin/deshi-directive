@@ -9,7 +9,7 @@ import { LogOut, Menu, X, Plane, UserCircle, Shield } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Header() {
-	const { user, logout } = useAuth();
+	const { user, logout, isLoading } = useAuth();
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 	const handleLogout = async () => {
@@ -37,7 +37,27 @@ export default function Header() {
 				</Link>
 
 				<div className="hidden md:flex items-center space-x-4">
-					{user ? (
+					<Link href="/community">
+						<span className="text-sm text-muted-foreground hover:text-foreground">
+							Community
+						</span>
+					</Link>
+					<Link href="/places">
+						<span className="text-sm text-muted-foreground hover:text-foreground">
+							Places
+						</span>
+					</Link>
+					<Link href="/users">
+						<span className="text-sm text-muted-foreground hover:text-foreground">
+							Browse
+						</span>
+					</Link>
+					{isLoading ? (
+						<div className="flex items-center space-x-4">
+							<div className="h-9 w-9 rounded bg-muted" />
+							<div className="h-4 w-32 rounded bg-muted" />
+						</div>
+					) : user ? (
 						<div className="flex items-center space-x-4">
 							<Avatar className="h-9 w-9 border-2 border-primary/10">
 								{user.profilePicture ? (
@@ -117,6 +137,31 @@ export default function Header() {
 							</Link>
 						</div>
 					)}
+					{/* My Orders link for signed-in customers only */}
+					{user &&
+						(user.userType === "newbie" ||
+							user.userType === "veteran") && (
+							<Link
+								href="/profile/orders"
+								className="hidden items-center gap-2 md:flex ml-4"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									className="h-4 w-4"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth="2"
+										d="M3 3h18v4H3zM5 11h14v10H5z"
+									/>
+								</svg>
+								<span className="font-medium">My Orders</span>
+							</Link>
+						)}
 				</div>
 
 				<div className="md:hidden">
@@ -139,8 +184,18 @@ export default function Header() {
 				<div className="md:hidden border-t bg-background">
 					<div className="container mx-auto px-4 py-4">
 						<div className="space-y-3">
-							{user ? (
-								<>
+							{isLoading ? (
+								<div className="pb-2">
+									<div className="h-10 w-10 rounded bg-muted mb-2" />
+									<div className="h-4 w-40 rounded bg-muted" />
+								</div>
+							) : user ? (
+								<div>
+									<Link href="/places">
+										<Button variant="ghost" size="sm">
+											Places
+										</Button>
+									</Link>
 									<div className="flex items-center space-x-3 pb-2">
 										<Avatar className="h-10 w-10 border-2 border-primary/10">
 											{user.profilePicture ? (
@@ -243,7 +298,7 @@ export default function Header() {
 											Logout
 										</Button>
 									</div>
-								</>
+								</div>
 							) : (
 								<div className="space-y-2">
 									<Link

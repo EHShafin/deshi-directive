@@ -44,6 +44,9 @@ export default function UserProfile() {
 	const [error, setError] = useState<string | null>(null);
 	const [rating, setRating] = useState<number>(5);
 	const [comment, setComment] = useState<string>("");
+	const [currentUser, setCurrentUser] = useState<any>(null);
+	const [authLoading, setAuthLoading] = useState(true);
+	const [submitError, setSubmitError] = useState<string | null>(null);
 
 	useEffect(() => {
 		const fetchUser = async () => {
@@ -67,6 +70,26 @@ export default function UserProfile() {
 			fetchUser();
 		}
 	}, [params.id]);
+
+	useEffect(() => {
+		const fetchCurrent = async () => {
+			try {
+				const res = await fetch("/api/auth/me", { cache: "no-store" });
+				if (res.ok) {
+					const d = await res.json();
+					setCurrentUser(d.user || null);
+				} else {
+					setCurrentUser(null);
+				}
+			} catch (e) {
+				setCurrentUser(null);
+			} finally {
+				setAuthLoading(false);
+			}
+		};
+
+		fetchCurrent();
+	}, []);
 
 	if (isLoading) {
 		return (
@@ -122,6 +145,14 @@ export default function UserProfile() {
 
 				<ProfileDisplay user={user} isOwnProfile={false} />
 
+				<div className="mt-4">
+					<Button asChild>
+						<Link href={`/tour?veteran=${user.id}`}>
+							Request Tour
+						</Link>
+					</Button>
+				</div>
+
 				{["local_shop", "restaurant"].includes(user.userType) && (
 					<div className="mt-6 border rounded-lg p-4 space-y-3">
 						<h2 className="text-lg font-semibold">
@@ -140,26 +171,63 @@ export default function UserProfile() {
 								}
 							/>
 						</div>
-						<Textarea
-							placeholder="Comment (optional)"
-							value={comment}
-							onChange={(e) => setComment(e.target.value)}
-						/>
-						<Button
-							onClick={async () => {
-								await fetch(`/api/users/${user.id}/feedback`, {
-									method: "POST",
-									headers: {
-										"Content-Type": "application/json",
-									},
-									body: JSON.stringify({ rating, comment }),
-								});
-								setRating(5);
-								setComment("");
-							}}
-						>
-							Submit
-						</Button>
+						{authLoading ? (
+							<div>Checking login...</div>
+						) : currentUser && currentUser.userType === "newbie" ? (
+							<>
+								<Textarea
+									placeholder="Comment (optional)"
+									value={comment}
+									onChange={(e) => setComment(e.target.value)}
+								/>
+								{submitError && (
+									<p className="text-sm text-destructive">
+										{submitError}
+									</p>
+								)}
+								<Button
+									onClick={async () => {
+										setSubmitError(null);
+										try {
+											const res = await fetch(
+												`/api/users/${user.id}/feedback`,
+												{
+													method: "POST",
+													headers: {
+														"Content-Type":
+															"application/json",
+													},
+													body: JSON.stringify({
+														rating,
+														comment,
+													}),
+												}
+											);
+											if (!res.ok) {
+												const d = await res
+													.json()
+													.catch(() => ({}));
+												setSubmitError(
+													d.error ||
+														"Failed to submit"
+												);
+												return;
+											}
+											setRating(5);
+											setComment("");
+										} catch (e) {
+											setSubmitError("Failed to submit");
+										}
+									}}
+								>
+									Submit
+								</Button>
+							</>
+						) : (
+							<p className="text-sm text-muted-foreground">
+								You must be a General User to leave feedback.
+							</p>
+						)}
 					</div>
 				)}
 			</div>

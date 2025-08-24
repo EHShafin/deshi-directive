@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,23 +15,58 @@ import SellerNav from "@/components/seller/SellerNav";
 
 export default function OrdersPage() {
 	const [orders, setOrders] = useState<any[]>([]);
-	const [status, setStatus] = useState<string>("");
+	const [status, setStatus] = useState<string>("all");
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
-	const load = () =>
-		fetch(`/api/seller/orders${status ? `?status=${status}` : ""}`)
-			.then((r) => r.json())
-			.then((d) => setOrders(d.orders || []));
+	const load = () => {
+		setLoading(true);
+		const q = status && status !== "all" ? `?status=${status}` : "";
+		return fetch(`/api/seller/orders${q}`, {
+			credentials: "include",
+		})
+			.then((r) => {
+				if (r.status === 401) {
+					setError("unauthorized");
+					return { orders: [] };
+				}
+				return r.json();
+			})
+			.then((d) => setOrders(d.orders || []))
+			.finally(() => setLoading(false));
+	};
 	useEffect(() => {
 		load();
 	}, [status]);
 
+	const router = useRouter();
+
+	useEffect(() => {
+		if (error === "unauthorized") {
+			router.push("/signin");
+		}
+	}, [error, router]);
+
 	const update = async (id: string, newStatus: string) => {
-		await fetch(`/api/seller/orders/${id}`, {
-			method: "PUT",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ status: newStatus }),
-		});
-		load();
+		setLoading(true);
+		try {
+			const res = await fetch(`/api/seller/orders/${id}`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ status: newStatus }),
+				credentials: "include",
+			});
+			if (res.status === 401) {
+				setError("unauthorized");
+				return;
+			}
+			await res.json();
+			load();
+		} catch (e) {
+			console.error(e);
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	return (
@@ -45,7 +81,7 @@ export default function OrdersPage() {
 							<SelectValue placeholder="All" />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="">All</SelectItem>
+							<SelectItem value="all">All</SelectItem>
 							<SelectItem value="pending">Pending</SelectItem>
 							<SelectItem value="paid">Paid</SelectItem>
 							<SelectItem value="shipped">Shipped</SelectItem>
@@ -74,6 +110,32 @@ export default function OrdersPage() {
 									)}
 								</div>
 								<div className="font-semibold">${o.total}</div>
+							</div>
+							<div className="space-y-2">
+								{o.items.map((it: any) => (
+									<div
+										key={String(it.product)}
+										className="flex items-center gap-3 border rounded p-2"
+									>
+										<img
+											src="/placeholder.svg"
+											className="w-14 h-14 object-cover rounded"
+											alt={it.name}
+										/>
+										<div className="flex-1">
+											<div className="font-medium">
+												{it.name}
+											</div>
+											<div className="text-sm text-muted-foreground">
+												Quantity: {it.quantity} • Unit:
+												${it.price}
+											</div>
+										</div>
+										<div className="font-semibold">
+											${it.price * it.quantity}
+										</div>
+									</div>
+								))}
 							</div>
 							<div className="flex flex-wrap gap-2">
 								{(

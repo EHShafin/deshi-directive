@@ -73,7 +73,73 @@ export default function Profile() {
 				) : (
 					<ProfileDisplay user={user} isOwnProfile={true} />
 				)}
+
+				<div className="mt-6">
+					<h2 className="text-lg font-semibold">
+						Your Tour Requests
+					</h2>
+					<YourBookings />
+					<div className="mt-4 flex gap-3">
+						{user?.place && (
+							<button
+								className="btn"
+								onClick={() =>
+									window.location.assign(
+										`/places/${user.place}/products`
+									)
+								}
+							>
+								View Local Products
+							</button>
+						)}
+						{(user.userType === "newbie" ||
+							user.userType === "veteran") && (
+							<button
+								className="btn btn-primary"
+								onClick={() =>
+									window.location.assign(`/profile/orders`)
+								}
+							>
+								My Orders
+							</button>
+						)}
+						*** End Patch
+					</div>
+				</div>
 			</div>
+		</div>
+	);
+}
+
+function YourBookings() {
+	const [list, setList] = useState<any[]>([]);
+
+	useEffect(() => {
+		fetch("/api/tours/my")
+			.then((r) => r.json())
+			.then((d) => setList(d.requests || []));
+	}, []);
+
+	if (!list.length)
+		return <p className="text-muted-foreground">No bookings yet.</p>;
+
+	return (
+		<div className="space-y-3">
+			{list.map((t) => (
+				<div key={t._id} className="p-3 border rounded">
+					<div className="flex items-center justify-between">
+						<div>
+							<div className="font-semibold">
+								{t.place?.name || "Place"}
+							</div>
+							<div className="text-sm text-muted-foreground">
+								{new Date(t.time).toLocaleString()}
+							</div>
+						</div>
+						<div className="text-sm">{t.status}</div>
+					</div>
+				</div>
+			))}
 		</div>
 	);
 }

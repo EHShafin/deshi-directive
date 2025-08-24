@@ -27,10 +27,12 @@ export async function GET(request: NextRequest) {
 		const page = parseInt(searchParams.get("page") || "1");
 		const limit = parseInt(searchParams.get("limit") || "20");
 
+		// populate user (author) so feedbacks are public with author info
 		const feedbacks = await Feedback.find({ seller: decoded.userId })
 			.sort({ createdAt: -1 })
 			.limit(limit)
-			.skip((page - 1) * limit);
+			.skip((page - 1) * limit)
+			.populate("user", "name");
 
 		const total = await Feedback.countDocuments({ seller: decoded.userId });
 		const sellerId = new mongoose.Types.ObjectId(decoded.userId as string);
@@ -40,11 +42,12 @@ export async function GET(request: NextRequest) {
 		]);
 
 		return NextResponse.json({
-			feedbacks: feedbacks.map((f) => ({
+			feedbacks: feedbacks.map((f: any) => ({
 				id: f._id,
 				rating: f.rating,
 				comment: f.comment,
 				createdAt: f.createdAt,
+				user: f.user ? { id: f.user._id, name: f.user.name } : null,
 			})),
 			total,
 			averageRating: avg[0]?.avg || 0,

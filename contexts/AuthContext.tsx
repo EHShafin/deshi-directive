@@ -54,10 +54,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 	useEffect(() => {
 		const checkAuth = async () => {
 			try {
-				const response = await fetch("/api/auth/me");
+				const response = await fetch("/api/auth/me", {
+					method: "GET",
+					credentials: "include",
+					cache: "no-store",
+				});
 				if (response.ok) {
 					const userData = await response.json();
-					setUser(userData.user);
+					setUser(userData.user ?? null);
+				} else {
+					setUser(null);
 				}
 			} catch (error) {
 				console.error("Auth check failed:", error);
@@ -75,8 +81,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
 	const logout = async () => {
 		try {
-			await fetch("/api/auth/logout", { method: "POST" });
+			setIsLoading(true);
+			await fetch("/api/auth/logout", {
+				method: "POST",
+				credentials: "include",
+			});
 			setUser(null);
+			setIsLoading(false);
 		} catch (error) {
 			console.error("Logout failed:", error);
 		}
