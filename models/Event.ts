@@ -8,6 +8,7 @@ export interface IEvent extends mongoose.Document {
 	location?: string;
 	isActive: boolean;
 	createdAt: Date;
+	creator: mongoose.Types.ObjectId;
 }
 
 const EventSchema = new mongoose.Schema({
@@ -18,6 +19,11 @@ const EventSchema = new mongoose.Schema({
 	location: { type: String, trim: true },
 	isActive: { type: Boolean, default: true },
 	createdAt: { type: Date, default: Date.now },
+	creator: {
+		type: mongoose.Schema.Types.ObjectId,
+		ref: "User",
+		required: true,
+	},
 });
 
 export default mongoose.models.Event ||

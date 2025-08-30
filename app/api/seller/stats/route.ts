@@ -3,7 +3,6 @@ import { decode } from "next-auth/jwt";
 import dbConnect from "@/lib/mongodb";
 import Order from "@/models/Order";
 import Product from "@/models/Product";
-import Feedback from "@/models/Feedback";
 import mongoose from "mongoose";
 
 export async function GET(request: NextRequest) {
@@ -28,7 +27,7 @@ export async function GET(request: NextRequest) {
 
 		const sellerId = new mongoose.Types.ObjectId(decoded.userId);
 
-		const [ordersAgg, productsCount, feedbackAgg] = await Promise.all([
+		const [ordersAgg, productsCount] = await Promise.all([
 			Order.aggregate([
 				{ $match: { seller: sellerId } },
 				{
@@ -40,16 +39,6 @@ export async function GET(request: NextRequest) {
 				},
 			]),
 			Product.countDocuments({ seller: sellerId }),
-			Feedback.aggregate([
-				{ $match: { seller: sellerId } },
-				{
-					$group: {
-						_id: null,
-						avgRating: { $avg: "$rating" },
-						count: { $sum: 1 },
-					},
-				},
-			]),
 		]);
 
 		const statusMap: any = {
@@ -69,10 +58,7 @@ export async function GET(request: NextRequest) {
 			orders: statusMap,
 			revenue,
 			products: productsCount,
-			feedback: {
-				avgRating: feedbackAgg[0]?.avgRating || 0,
-				count: feedbackAgg[0]?.count || 0,
-			},
+			feedback: { avgRating: 0, count: 0 },
 		});
 	} catch (e) {
 		return NextResponse.json({ error: "Failed" }, { status: 500 });

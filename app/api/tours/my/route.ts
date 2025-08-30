@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 			$or: [{ newbie: userId }, { veteran: userId }],
 		})
 			.sort({ createdAt: -1 })
-			.populate("newbie veteran place review", "name");
+			.populate("newbie veteran place", "name");
 
 		return NextResponse.json({ requests });
 	} catch (error) {

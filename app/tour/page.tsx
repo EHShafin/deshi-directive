@@ -2,6 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Page() {
 	const [veteranFromQuery, setVeteranFromQuery] = useState("");
@@ -9,7 +12,11 @@ export default function Page() {
 	const [newbie, setNewbie] = useState("");
 	const [veteran, setVeteran] = useState(veteranFromQuery);
 	const [place, setPlace] = useState("");
-	const [time, setTime] = useState("");
+	const [places, setPlaces] = useState<{ _id: string; name: string }[]>([]);
+	const [isPlaceLocked, setIsPlaceLocked] = useState(false);
+	const [placeName, setPlaceName] = useState("");
+	const [startTime, setStartTime] = useState("");
+	const [endTime, setEndTime] = useState("");
 	const [offer, setOffer] = useState(0);
 	const [created, setCreated] = useState<any>(null);
 	const [cardNumber, setCardNumber] = useState("");
@@ -17,6 +24,7 @@ export default function Page() {
 	const [expiry, setExpiry] = useState("");
 	const [cvv, setCvv] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const router = useRouter();
 
 	useEffect(() => {
 		const params =
@@ -28,6 +36,83 @@ export default function Page() {
 		if (v) setVeteran(v);
 	}, []);
 
+	const { user, isLoading } = useAuth();
+
+	useEffect(() => {
+		if (!isLoading && user) {
+			setNewbie(user.id);
+		}
+	}, [isLoading, user]);
+
+	useEffect(() => {
+		const fetchPlaces = async () => {
+			try {
+				const res = await fetch("/api/places");
+				if (!res.ok) return;
+				const data = await res.json();
+				setPlaces(
+					(Array.isArray(data.places) ? data.places : data).map(
+						(p: any) => ({
+							_id: p._id || p.id || p._id,
+							name: p.name || p.businessName || "(unknown)",
+						})
+					)
+				);
+			} catch (e) {
+				console.error("Failed to load places", e);
+			}
+		};
+
+		fetchPlaces();
+	}, []);
+
+	useEffect(() => {
+		const loadGuide = async () => {
+			if (!veteranFromQuery) {
+				setIsPlaceLocked(false);
+				setPlaceName("");
+				return;
+			}
+
+			try {
+				const res = await fetch(`/api/users/${veteranFromQuery}`);
+				if (!res.ok) {
+					setIsPlaceLocked(false);
+					return;
+				}
+				const data = await res.json();
+				const guide = data.user;
+				if (guide && guide.place) {
+					const pid =
+						guide.place._id || guide.place.id || guide.place;
+					const pname =
+						guide.place.name ||
+						[guide.place.city, guide.place.state]
+							.filter(Boolean)
+							.join(", ") ||
+						"(place)";
+					setPlace(pid);
+					setPlaceName(pname);
+					setIsPlaceLocked(true);
+
+					setPlaces((prev) =>
+						prev.some((p) => p._id === pid)
+							? prev
+							: [{ _id: pid, name: pname }, ...prev]
+					);
+				} else {
+					setIsPlaceLocked(false);
+					setPlaceName("");
+				}
+			} catch (e) {
+				console.error("Failed to load guide profile", e);
+				setIsPlaceLocked(false);
+			}
+		};
+
+		loadGuide();
+	}, [veteranFromQuery]);
+
 	async function createRequest(e: any) {
 		e.preventDefault();
 		setError(null);
@@ -35,11 +120,13 @@ export default function Page() {
 			const res = await fetch("/api/tours/requests", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
+				credentials: "include",
 				body: JSON.stringify({
-					newbie,
-					veteran,
+					...(newbie ? { newbie } : {}),
+					...(veteran ? { veteran } : {}),
 					place,
-					time,
+					startTime,
+					endTime,
 					newbieOffer: offer,
 				}),
 			});
@@ -48,7 +135,14 @@ export default function Page() {
 				setError(data.error || "Failed to create request");
 				return;
 			}
-			setCreated(data.tourRequest);
+			const tr = data.tourRequest;
+			if (tr) {
+				// if created request is already confirmed, open payment UI on orders page
+				const payParam =
+					tr.status === "confirmed" ? `?pay=${tr._id}` : "";
+				router.push(`/profile/orders${payParam}`);
+				return;
+			}
 		} catch (e) {
 			setError("Failed to create request");
 		}
@@ -70,11 +164,12 @@ export default function Page() {
 		});
 		const data = await res.json();
 		setCreated(data.tourRequest || created);
-		alert(
-			data.payment
-				? "Payment recorded (fake)"
-				: data.error || "Payment failed"
-		);
+		if (res.ok && data.payment) {
+			toast.success("Payment recorded");
+			router.push("/profile/orders");
+			return;
+		}
+		toast.error(data.error || "Payment failed");
 	}
 
 	return (
@@ -83,41 +178,75 @@ export default function Page() {
 				<h1 className="text-3xl font-bold mb-4">Request a Tour</h1>
 
 				<form onSubmit={createRequest} className="space-y-4">
-					<label className="block">
-						<div className="text-sm mb-1">
-							Your user id (newbie)
+					{user ? (
+						<div className="mb-2 text-sm text-muted-foreground">
+							Logged in as: <strong>{user.name}</strong> (id
+							hidden)
 						</div>
-						<Input
-							value={newbie}
-							onChange={(e: any) => setNewbie(e.target.value)}
-						/>
-					</label>
+					) : (
+						<label className="block">
+							<div className="text-sm mb-1">
+								Your user id (newbie)
+							</div>
+							<Input
+								value={newbie}
+								onChange={(e: any) => setNewbie(e.target.value)}
+							/>
+						</label>
+					)}
+
+					{veteranFromQuery ? null : (
+						<label className="block">
+							<div className="text-sm mb-1">
+								Guide user id (veteran) — optional
+							</div>
+							<Input
+								value={veteran}
+								onChange={(e: any) =>
+									setVeteran(e.target.value)
+								}
+							/>
+						</label>
+					)}
 
 					<label className="block">
-						<div className="text-sm mb-1">
-							Guide user id (veteran)
-						</div>
-						<Input
-							value={veteran}
-							onChange={(e: any) => setVeteran(e.target.value)}
-						/>
-					</label>
-
-					<label className="block">
-						<div className="text-sm mb-1">Place id</div>
-						<Input
+						<div className="text-sm mb-1">Place</div>
+						<select
+							className="w-full border rounded px-2 py-1"
 							value={place}
 							onChange={(e: any) => setPlace(e.target.value)}
+							disabled={isPlaceLocked}
+						>
+							<option value="">Select a place</option>
+							{places.map((p) => (
+								<option key={p._id} value={p._id}>
+									{p.name}
+								</option>
+							))}
+						</select>
+						{isPlaceLocked && (
+							<p className="text-sm text-muted-foreground mt-1">
+								Place set from guide:{" "}
+								<strong>{placeName || "(locked)"}</strong>
+							</p>
+						)}
+					</label>
+
+					<label className="block">
+						<div className="text-sm mb-1">Start time</div>
+						<Input
+							type="datetime-local"
+							value={startTime}
+							onChange={(e: any) => setStartTime(e.target.value)}
 						/>
 					</label>
 
 					<label className="block">
-						<div className="text-sm mb-1">
-							Time (YYYY-MM-DDTHH:MM)
-						</div>
+						<div className="text-sm mb-1">End time</div>
 						<Input
-							value={time}
-							onChange={(e: any) => setTime(e.target.value)}
+							type="datetime-local"
+							value={endTime}
+							onChange={(e: any) => setEndTime(e.target.value)}
 						/>
 					</label>
 
@@ -144,37 +273,10 @@ export default function Page() {
 						<h2 className="text-xl font-semibold mb-2">
 							Request created
 						</h2>
-						<pre className="bg-muted p-3 rounded">
-							{JSON.stringify(created, null, 2)}
-						</pre>
-
-						<form onSubmit={pay} className="space-y-3 mt-4">
-							<Input
-								placeholder="Card Number (16 digits)"
-								value={cardNumber}
-								onChange={(e: any) =>
-									setCardNumber(e.target.value)
-								}
-							/>
-							<Input
-								placeholder="Name on Card"
-								value={cardName}
-								onChange={(e: any) =>
-									setCardName(e.target.value)
-								}
-							/>
-							<Input
-								placeholder="MM/YY"
-								value={expiry}
-								onChange={(e: any) => setExpiry(e.target.value)}
-							/>
-							<Input
-								placeholder="CVV"
-								value={cvv}
-								onChange={(e: any) => setCvv(e.target.value)}
-							/>
-							<Button type="submit">Pay (fake)</Button>
-						</form>
+						<div className="text-sm text-muted-foreground">
+							Your request was created. You can manage and pay for
+							confirmed requests from the Tour Requests page.
+						</div>
 					</div>
 				)}
 			</div>

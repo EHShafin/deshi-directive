@@ -11,12 +11,13 @@ export interface ITourRequest extends mongoose.Document {
 	newbie: mongoose.Types.ObjectId;
 	veteran?: mongoose.Types.ObjectId;
 	place: mongoose.Types.ObjectId;
-	time: Date;
+	startTime: Date;
+	endTime: Date;
 	estimatePrice?: number;
 	newbieOffer?: number;
 	veteranOffer?: number;
+	offers?: { who: "newbie" | "veteran"; amount: number; at: Date }[];
 	status: TourStatus;
-	review?: mongoose.Types.ObjectId;
 	createdAt: Date;
 }
 
@@ -33,16 +34,23 @@ const TourRequestSchema = new mongoose.Schema({
 		ref: "Place",
 		required: true,
 	},
-	time: { type: Date, required: true },
+	startTime: { type: Date, required: true },
+	endTime: { type: Date, required: true },
 	estimatePrice: { type: Number },
 	newbieOffer: { type: Number },
 	veteranOffer: { type: Number },
+	offers: [
+		{
+			who: { type: String },
+			amount: { type: Number },
+			at: { type: Date, default: Date.now },
+		},
+	],
 	status: {
 		type: String,
 		enum: ["requested", "offered", "confirmed", "completed", "cancelled"],
 		default: "requested",
 	},
-	review: { type: mongoose.Schema.Types.ObjectId, ref: "Review" },
 	createdAt: { type: Date, default: Date.now },
 });
 

@@ -1,24 +1,21 @@
 import mongoose from "mongoose";
 
 export interface IReview extends mongoose.Document {
-	reviewer: mongoose.Types.ObjectId;
-	targetUser?: mongoose.Types.ObjectId;
-	place?: mongoose.Types.ObjectId;
+	from: mongoose.Types.ObjectId;
+	to: mongoose.Types.ObjectId;
 	rating: number;
 	comment?: string;
+	fromName?: string;
+	fromProfilePicture?: string;
 	createdAt: Date;
 }
 
 const ReviewSchema = new mongoose.Schema({
-	reviewer: {
-		type: mongoose.Schema.Types.ObjectId,
-		ref: "User",
-		required: true,
-		index: true,
-	},
-	targetUser: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-	place: { type: mongoose.Schema.Types.ObjectId, ref: "Place" },
-	rating: { type: Number, required: true, min: 1, max: 5 },
+	from: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+	fromName: { type: String, trim: true },
+	fromProfilePicture: { type: String, trim: true },
+	to: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+	rating: { type: Number, required: true, min: 0, max: 5 },
 	comment: { type: String, trim: true },
 	createdAt: { type: Date, default: Date.now },
 });

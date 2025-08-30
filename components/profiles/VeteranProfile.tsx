@@ -141,6 +141,7 @@ export default function VeteranProfile({
 						{user.place?.city || "amazing destinations"}
 						and providing authentic local experiences.
 					</p>
+					{/* Removed 'My Tour Requests' link per request */}
 				</div>
 			</CardContent>
 		</Card>

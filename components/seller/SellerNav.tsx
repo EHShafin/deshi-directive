@@ -7,7 +7,6 @@ export default function SellerNav() {
 		{ href: "/seller", label: "Dashboard" },
 		{ href: "/seller/products", label: "Products" },
 		{ href: "/seller/orders", label: "Orders" },
-		{ href: "/seller/feedback", label: "Feedback" },
 		{ href: "/seller/inventory", label: "Inventory" },
 		{ href: "/seller/settings", label: "Settings" },
 	];

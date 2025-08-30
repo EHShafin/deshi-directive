@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
 			.sort({ createdAt: -1 })
 			.limit(limit)
 			.skip((page - 1) * limit)
+			.populate("seller", "userType businessName name")
 			.lean();
 
 		const total = await Order.countDocuments(query);

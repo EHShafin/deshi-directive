@@ -10,7 +10,7 @@ export async function GET() {
 		const list = await TourRequest.find()
 			.sort({ createdAt: -1 })
 			.limit(100)
-			.populate("newbie veteran place review", "name");
+			.populate("newbie veteran place", "name");
 		return NextResponse.json({ requests: list });
 	} catch (error) {
 		return NextResponse.json(
@@ -48,9 +48,16 @@ export async function POST(request: NextRequest) {
 				{ status: 403 }
 			);
 
-		const { newbie, veteran, place, time, estimatePrice, newbieOffer } =
-			await request.json();
-		if (!newbie || !place || !time || !veteran)
+		const {
+			newbie,
+			veteran,
+			place,
+			startTime,
+			endTime,
+			estimatePrice,
+			newbieOffer,
+		} = await request.json();
+		if (!newbie || !place || !startTime || !endTime || !veteran)
 			return NextResponse.json(
 				{ error: "Missing fields" },
 				{ status: 400 }
@@ -64,13 +71,23 @@ export async function POST(request: NextRequest) {
 				{ status: 400 }
 			);
 
+		const s = new Date(startTime);
+		const e = new Date(endTime);
+		if (isNaN(s.getTime()) || isNaN(e.getTime()) || e <= s)
+			return NextResponse.json(
+				{ error: "Invalid start or end time" },
+				{ status: 400 }
+			);
+
 		const tr = await TourRequest.create({
 			newbie,
 			veteran,
 			place,
-			time: new Date(time),
+			startTime: s,
+			endTime: e,
 			estimatePrice,
 			newbieOffer,
+			offers: newbieOffer ? [{ who: "newbie", amount: newbieOffer }] : [],
 		});
 
 		return NextResponse.json({ tourRequest: tr }, { status: 201 });

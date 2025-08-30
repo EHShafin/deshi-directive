@@ -7,6 +7,12 @@ export interface IFundraiser extends mongoose.Document {
 	raised: number;
 	isActive: boolean;
 	createdAt: Date;
+	creator: mongoose.Types.ObjectId;
+	donations: Array<{
+		user: mongoose.Types.ObjectId;
+		amount: number;
+		createdAt: Date;
+	}>;
 }
 
 const FundraiserSchema = new mongoose.Schema({
@@ -16,6 +22,18 @@ const FundraiserSchema = new mongoose.Schema({
 	raised: { type: Number, default: 0, min: 0 },
 	isActive: { type: Boolean, default: true },
 	createdAt: { type: Date, default: Date.now },
+	creator: {
+		type: mongoose.Schema.Types.ObjectId,
+		ref: "User",
+		required: true,
+	},
+	donations: [
+		{
+			user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+			amount: { type: Number, min: 0 },
+			createdAt: { type: Date, default: Date.now },
+		},
+	],
 });
 
 export default mongoose.models.Fundraiser ||
