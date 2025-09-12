@@ -39,14 +39,7 @@ export default function SellerDashboard() {
 						{stats?.revenue?.toFixed?.(2) || 0}
 					</CardContent>
 				</Card>
-				<Card>
-					<CardHeader>
-						<CardTitle>Products</CardTitle>
-					</CardHeader>
-					<CardContent className="text-2xl font-bold">
-						{stats?.products || 0}
-					</CardContent>
-				</Card>
+
 				<Card>
 					<CardHeader>
 						<CardTitle>Orders</CardTitle>
@@ -56,14 +49,6 @@ export default function SellerDashboard() {
 							(stats?.orders?.shipped || 0) +
 							(stats?.orders?.completed || 0) +
 							(stats?.orders?.pending || 0)}
-					</CardContent>
-				</Card>
-				<Card>
-					<CardHeader>
-						<CardTitle>Rating</CardTitle>
-					</CardHeader>
-					<CardContent className="text-2xl font-bold">
-						{(stats?.feedback?.avgRating || 0).toFixed?.(1)} ★
 					</CardContent>
 				</Card>
 			</div>
@@ -104,9 +89,6 @@ export default function SellerDashboard() {
 						</a>
 						<a href="/seller/orders">
 							<Button variant="outline">Orders</Button>
-						</a>
-						<a href="/seller/feedback">
-							<Button variant="outline">Feedback</Button>
 						</a>
 						<a href="/seller/inventory">
 							<Button variant="outline">Inventory</Button>

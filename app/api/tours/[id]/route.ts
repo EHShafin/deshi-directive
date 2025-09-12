@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import TourRequest from "@/models/TourRequest";
 import Payment from "@/models/Payment";
+import { decode } from "next-auth/jwt";
 
 export async function GET(request: NextRequest, { params }: any) {
 	try {
 		await dbConnect();
-		const id = params.id;
+		const paramsObj: any = await params;
+		const id = paramsObj.id;
 		const tr = await TourRequest.findById(id).populate(
-			"newbie veteran place review"
+			"newbie veteran place"
 		);
 		if (!tr)
 			return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -24,14 +26,54 @@ export async function GET(request: NextRequest, { params }: any) {
 export async function PATCH(request: NextRequest, { params }: any) {
 	try {
 		await dbConnect();
-		const id = params.id;
+		const paramsObj: any = await params;
+		const id = paramsObj.id;
 		const body = await request.json();
 		const tr = await TourRequest.findById(id);
 		if (!tr)
 			return NextResponse.json({ error: "Not found" }, { status: 404 });
+		// auth
+		const token = request.cookies.get("token")?.value;
+		const decoded = token
+			? ((await decode({
+					token,
+					secret: process.env.JWT_SECRET!,
+			  })) as any)
+			: null;
+		const meId = decoded?.userId;
+
+		// restrict who can post offers
 		if (body.veteranOffer !== undefined) {
+			if (!meId || String(meId) !== String(tr.veteran)) {
+				return NextResponse.json(
+					{ error: "Unauthorized" },
+					{ status: 403 }
+				);
+			}
 			tr.veteranOffer = body.veteranOffer;
 			tr.status = "offered";
+			tr.offers = tr.offers || [];
+			tr.offers.push({
+				who: "veteran",
+				amount: body.veteranOffer,
+				at: new Date(),
+			} as any);
+		}
+		if (body.newbieOffer !== undefined) {
+			if (!meId || String(meId) !== String(tr.newbie)) {
+				return NextResponse.json(
+					{ error: "Unauthorized" },
+					{ status: 403 }
+				);
+			}
+			tr.newbieOffer = body.newbieOffer;
+			tr.status = "offered";
+			tr.offers = tr.offers || [];
+			tr.offers.push({
+				who: "newbie",
+				amount: body.newbieOffer,
+				at: new Date(),
+			} as any);
 		}
 		if (body.status) tr.status = body.status;
 		if (body.veteran) tr.veteran = body.veteran;
@@ -48,7 +90,8 @@ export async function PATCH(request: NextRequest, { params }: any) {
 export async function POST(request: NextRequest, { params }: any) {
 	try {
 		await dbConnect();
-		const id = params.id;
+		const paramsObj: any = await params;
+		const id = paramsObj.id;
 		const { cardNumber, cardName, expiry, cvv, amount } =
 			await request.json();
 		if (
@@ -75,7 +118,7 @@ export async function POST(request: NextRequest, { params }: any) {
 				{ error: "Tour request not found" },
 				{ status: 404 }
 			);
-		const p = await Payment.create({
+		const pay = await Payment.create({
 			tourRequest: tr._id,
 			cardNumber,
 			cardName,
@@ -83,9 +126,10 @@ export async function POST(request: NextRequest, { params }: any) {
 			cvv,
 			amount,
 		});
-		tr.status = "confirmed";
+		// mark as completed (paid)
+		tr.status = "completed";
 		await tr.save();
-		return NextResponse.json({ payment: p, tourRequest: tr });
+		return NextResponse.json({ payment: pay, tourRequest: tr });
 	} catch (error) {
 		return NextResponse.json(
 			{ error: "Internal server error" },

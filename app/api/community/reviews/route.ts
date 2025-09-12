@@ -1,51 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import dbConnect from "@/lib/mongodb";
-import Review from "@/models/Review";
-import User from "@/models/User";
+import { NextResponse } from "next/server";
+
+// Reviews have been removed from the application. Keep this route returning
+// 410 Gone so any existing callers fail fast and can be cleaned up.
 
 export async function GET() {
-	try {
-		await dbConnect();
-		const reviews = await Review.find()
-			.sort({ createdAt: -1 })
-			.limit(50)
-			.populate("reviewer targetUser place", "name email");
-		return NextResponse.json({ reviews });
-	} catch (error) {
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
-	}
+	return NextResponse.json({ error: "Reviews removed" }, { status: 410 });
 }
 
-export async function POST(request: NextRequest) {
-	try {
-		await dbConnect();
-		const { reviewer, targetUser, place, rating, comment } =
-			await request.json();
-		if (!reviewer || !rating)
-			return NextResponse.json(
-				{ error: "Missing fields" },
-				{ status: 400 }
-			);
-		if (rating < 1 || rating > 5)
-			return NextResponse.json(
-				{ error: "Invalid rating" },
-				{ status: 400 }
-			);
-		const review = await Review.create({
-			reviewer,
-			targetUser,
-			place,
-			rating,
-			comment,
-		});
-		return NextResponse.json({ review }, { status: 201 });
-	} catch (error) {
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
-	}
+export async function POST() {
+	return NextResponse.json({ error: "Reviews removed" }, { status: 410 });
 }

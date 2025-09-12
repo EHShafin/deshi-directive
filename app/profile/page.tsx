@@ -7,6 +7,7 @@ import ProfileDisplay from "@/components/ProfileDisplay";
 import ProfileEditForm from "@/components/ProfileEditForm";
 import { useRouter } from "next/navigation";
 import { Edit } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Profile() {
 	const { user, isLoading } = useAuth();
@@ -73,45 +74,12 @@ export default function Profile() {
 				) : (
 					<ProfileDisplay user={user} isOwnProfile={true} />
 				)}
-
-				<div className="mt-6">
-					<h2 className="text-lg font-semibold">
-						Your Tour Requests
-					</h2>
-					<YourBookings />
-					<div className="mt-4 flex gap-3">
-						{user?.place && (
-							<button
-								className="btn"
-								onClick={() =>
-									window.location.assign(
-										`/places/${user.place}/products`
-									)
-								}
-							>
-								View Local Products
-							</button>
-						)}
-						{(user.userType === "newbie" ||
-							user.userType === "veteran") && (
-							<button
-								className="btn btn-primary"
-								onClick={() =>
-									window.location.assign(`/profile/orders`)
-								}
-							>
-								My Orders
-							</button>
-						)}
-						*** End Patch
-					</div>
-				</div>
 			</div>
 		</div>
 	);
 }
 
-function YourBookings() {
+function YourBookings({ currentUserId }: { currentUserId: string }) {
 	const [list, setList] = useState<any[]>([]);
 
 	useEffect(() => {
@@ -126,17 +94,233 @@ function YourBookings() {
 	return (
 		<div className="space-y-3">
 			{list.map((t) => (
-				<div key={t._id} className="p-3 border rounded">
+				<div
+					key={t._id}
+					data-request={t._id}
+					className="p-3 border rounded"
+				>
 					<div className="flex items-center justify-between">
 						<div>
 							<div className="font-semibold">
 								{t.place?.name || "Place"}
 							</div>
 							<div className="text-sm text-muted-foreground">
-								{new Date(t.time).toLocaleString()}
+								{`${new Date(t.startTime).toLocaleString(
+									undefined,
+									{ dateStyle: "medium", timeStyle: "short" }
+								)} - ${new Date(t.endTime).toLocaleString(
+									undefined,
+									{ dateStyle: "medium", timeStyle: "short" }
+								)}`}
 							</div>
 						</div>
 						<div className="text-sm">{t.status}</div>
+					</div>
+					<div className="mt-3">
+						<div className="mb-2 font-medium">Offer history</div>
+						{Array.isArray(t.offers) && t.offers.length ? (
+							<div className="space-y-1">
+								{t.offers.map((o: any, i: number) => (
+									<div key={i} className="text-sm">
+										<strong>{o.who}</strong>: ৳{o.amount} •{" "}
+										{new Date(o.at).toLocaleString()}
+									</div>
+								))}
+							</div>
+						) : (
+							<div className="text-sm text-muted-foreground">
+								No offers yet
+							</div>
+						)}
+						<div className="mt-2 flex gap-2">
+							{String(currentUserId) === String(t.newbie?._id) &&
+								t.status !== "confirmed" && (
+									<>
+										<div className="flex items-center gap-2">
+											<input
+												type="number"
+												placeholder="Your offer"
+												data-offer-input
+												className="border px-2 py-1 rounded"
+											/>
+											<button
+												className="btn"
+												onClick={async (e) => {
+													const btn =
+														e.currentTarget as HTMLButtonElement;
+													const container =
+														btn.closest(
+															"[data-request]"
+														) as HTMLElement | null;
+													const el = container
+														? (container.querySelector(
+																"[data-offer-input]"
+														  ) as HTMLInputElement | null)
+														: null;
+													const v = el
+														? Number(el.value)
+														: NaN;
+													if (!v || isNaN(v)) {
+														toast.error(
+															"Enter a valid amount"
+														);
+														return;
+													}
+													const res = await fetch(
+														`/api/tours/${t._id}`,
+														{
+															method: "PATCH",
+															headers: {
+																"Content-Type":
+																	"application/json",
+															},
+															body: JSON.stringify(
+																{
+																	newbieOffer:
+																		v,
+																}
+															),
+														}
+													);
+													const d = await res.json();
+													if (
+														res.ok &&
+														d.tourRequest
+													) {
+														setList((arr) =>
+															arr.map((x) =>
+																x._id === t._id
+																	? d.tourRequest
+																	: x
+															)
+														);
+														toast.success(
+															"Offer sent"
+														);
+													} else {
+														toast.error(
+															d.error || "Failed"
+														);
+													}
+												}}
+											>
+												Send Offer
+											</button>
+										</div>
+										<button
+											className="btn"
+											onClick={async () => {
+												const res = await fetch(
+													`/api/tours/${t._id}`,
+													{
+														method: "PATCH",
+														headers: {
+															"Content-Type":
+																"application/json",
+														},
+														body: JSON.stringify({
+															status: "confirmed",
+														}),
+													}
+												);
+												const d = await res.json();
+												if (res.ok && d.tourRequest) {
+													setList((arr) =>
+														arr.map((x) =>
+															x._id === t._id
+																? d.tourRequest
+																: x
+														)
+													);
+													toast.success("Accepted");
+												} else {
+													toast.error(
+														d.error || "Failed"
+													);
+												}
+											}}
+										>
+											Accept
+										</button>
+									</>
+								)}
+							{String(currentUserId) === String(t.veteran?._id) &&
+								t.status !== "confirmed" && (
+									<>
+										<div className="flex items-center gap-2">
+											<input
+												type="number"
+												placeholder="Counter offer"
+												data-offer-input
+												className="border px-2 py-1 rounded"
+											/>
+											<button
+												className="btn"
+												onClick={async (e) => {
+													const btn =
+														e.currentTarget as HTMLButtonElement;
+													const container =
+														btn.closest(
+															"[data-request]"
+														) as HTMLElement | null;
+													const el = container
+														? (container.querySelector(
+																"[data-offer-input]"
+														  ) as HTMLInputElement | null)
+														: null;
+													const v = el
+														? Number(el.value)
+														: NaN;
+													if (!v || isNaN(v)) {
+														toast.error(
+															"Enter a valid amount"
+														);
+														return;
+													}
+													const res = await fetch(
+														`/api/tours/${t._id}`,
+														{
+															method: "PATCH",
+															headers: {
+																"Content-Type":
+																	"application/json",
+															},
+															body: JSON.stringify(
+																{
+																	veteranOffer:
+																		v,
+																}
+															),
+														}
+													);
+													const d = await res.json();
+													if (
+														res.ok &&
+														d.tourRequest
+													) {
+														setList((arr) =>
+															arr.map((x) =>
+																x._id === t._id
+																	? d.tourRequest
+																	: x
+															)
+														);
+														toast.success(
+															"Offer sent"
+														);
+													} else {
+														toast.error(
+															d.error || "Failed"
+														);
+													}
+												}}
+											>
+												Send Offer
+											</button>
+										</div>
+									</>
+								)}
+						</div>
 					</div>
 				</div>
 			))}

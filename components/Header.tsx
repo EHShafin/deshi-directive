@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 
 export default function Header() {
 	const { user, logout, isLoading } = useAuth();
+	const router = useRouter();
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 	const handleLogout = async () => {
@@ -17,6 +19,8 @@ export default function Header() {
 			await logout();
 			toast.success("Logged out successfully");
 			setIsMobileMenuOpen(false);
+			// redirect to sign in page after logout
+			router.push("/signin");
 		} catch (error) {
 			toast.error("Failed to logout");
 		}
@@ -37,11 +41,6 @@ export default function Header() {
 				</Link>
 
 				<div className="hidden md:flex items-center space-x-4">
-					<Link href="/community">
-						<span className="text-sm text-muted-foreground hover:text-foreground">
-							Community
-						</span>
-					</Link>
 					<Link href="/places">
 						<span className="text-sm text-muted-foreground hover:text-foreground">
 							Places
@@ -196,6 +195,7 @@ export default function Header() {
 											Places
 										</Button>
 									</Link>
+
 									<div className="flex items-center space-x-3 pb-2">
 										<Avatar className="h-10 w-10 border-2 border-primary/10">
 											{user.profilePicture ? (
@@ -288,6 +288,41 @@ export default function Header() {
 												Profile
 											</Button>
 										</Link>
+										{user &&
+											(user.userType === "newbie" ||
+												user.userType ===
+													"veteran") && (
+												<Link
+													href="/profile/orders"
+													onClick={() =>
+														setIsMobileMenuOpen(
+															false
+														)
+													}
+												>
+													<Button
+														variant="ghost"
+														size="sm"
+														className="w-full justify-start"
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															className="h-4 w-4 mr-2"
+															viewBox="0 0 24 24"
+															fill="none"
+															stroke="currentColor"
+														>
+															<path
+																strokeLinecap="round"
+																strokeLinejoin="round"
+																strokeWidth="2"
+																d="M3 3h18v4H3zM5 11h14v10H5z"
+															/>
+														</svg>
+														My Orders
+													</Button>
+												</Link>
+											)}
 										<Button
 											onClick={handleLogout}
 											variant="outline"

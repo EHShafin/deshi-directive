@@ -44,6 +44,9 @@ export default function UserProfile() {
 	const [error, setError] = useState<string | null>(null);
 	const [rating, setRating] = useState<number>(5);
 	const [comment, setComment] = useState<string>("");
+	const [reviews, setReviews] = useState<any[]>([]);
+	const [loadingReviews, setLoadingReviews] = useState<boolean>(true);
+	const [posting, setPosting] = useState<boolean>(false);
 	const [currentUser, setCurrentUser] = useState<any>(null);
 	const [authLoading, setAuthLoading] = useState(true);
 	const [submitError, setSubmitError] = useState<string | null>(null);
@@ -57,6 +60,8 @@ export default function UserProfile() {
 				}
 				const data = await response.json();
 				setUser(data.user);
+				// fetch reviews after profile
+				fetchReviews();
 			} catch (err) {
 				setError(
 					err instanceof Error ? err.message : "Failed to load user"
@@ -70,6 +75,21 @@ export default function UserProfile() {
 			fetchUser();
 		}
 	}, [params.id]);
+
+	async function fetchReviews() {
+		setLoadingReviews(true);
+		try {
+			const res = await fetch(`/api/users/${params.id}/reviews`);
+			if (res.ok) {
+				const d = await res.json();
+				setReviews(d.reviews || []);
+			}
+		} catch (e) {
+			// ignore
+		} finally {
+			setLoadingReviews(false);
+		}
+	}
 
 	useEffect(() => {
 		const fetchCurrent = async () => {
@@ -90,6 +110,37 @@ export default function UserProfile() {
 
 		fetchCurrent();
 	}, []);
+
+	const handleSubmitReview = async () => {
+		setSubmitError(null);
+		if (!currentUser) {
+			setSubmitError("You must be signed in to submit a review");
+			return;
+		}
+
+		setPosting(true);
+		try {
+			const res = await fetch(`/api/users/${params.id}/reviews`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ rating, comment }),
+			});
+			if (!res.ok) {
+				const d = await res.json().catch(() => ({}));
+				setSubmitError(d.error || "Failed to submit review");
+				return;
+			}
+
+			setComment("");
+			setRating(5);
+			// refresh reviews
+			await fetchReviews();
+		} catch (e) {
+			setSubmitError("Failed to submit review");
+		} finally {
+			setPosting(false);
+		}
+	};
 
 	if (isLoading) {
 		return (
@@ -145,91 +196,120 @@ export default function UserProfile() {
 
 				<ProfileDisplay user={user} isOwnProfile={false} />
 
-				<div className="mt-4">
-					<Button asChild>
-						<Link href={`/tour?veteran=${user.id}`}>
-							Request Tour
-						</Link>
-					</Button>
-				</div>
+				{user.userType === "veteran" && (
+					<div className="mt-4">
+						<Button asChild>
+							<Link href={`/tour?veteran=${user.id}`}>
+								Request Tour
+							</Link>
+						</Button>
+					</div>
+				)}
 
-				{["local_shop", "restaurant"].includes(user.userType) && (
-					<div className="mt-6 border rounded-lg p-4 space-y-3">
-						<h2 className="text-lg font-semibold">
-							Leave Feedback
-						</h2>
-						<div className="flex items-center gap-2">
-							<span className="text-sm">Rating</span>
-							<Input
-								type="number"
-								min={1}
-								max={5}
-								className="w-24"
-								value={rating}
-								onChange={(e) =>
-									setRating(parseInt(e.target.value || "5"))
-								}
-							/>
+				{["local_shop", "restaurant"].includes(user.userType) && null}
+
+				{/* Reviews section */}
+				<div className="mt-8">
+					<h2 className="text-2xl font-semibold mb-3">Reviews</h2>
+					{loadingReviews ? (
+						<div className="text-sm text-muted-foreground">
+							Loading reviews...
 						</div>
+					) : reviews.length === 0 ? (
+						<div className="text-sm text-muted-foreground">
+							No reviews yet.
+						</div>
+					) : (
+						<div className="space-y-4">
+							{reviews.map((r) => (
+								<div key={r.id} className="p-4 border rounded">
+									<div className="flex items-center">
+										<div className="mr-3">
+											{/* simple avatar */}
+											<img
+												src={
+													r.from?.profilePicture ||
+													"/placeholder.svg"
+												}
+												alt={r.from?.name || "Guest"}
+												className="h-10 w-10 rounded-full object-cover"
+											/>
+										</div>
+										<div>
+											<div className="font-medium">
+												{r.from?.name || "Guest"}
+											</div>
+											<div className="text-sm text-muted-foreground">
+												{new Date(
+													r.createdAt
+												).toLocaleString()}
+											</div>
+										</div>
+									</div>
+									<div className="mt-2">
+										<div className="font-semibold">
+											Rating: {r.rating}/5
+										</div>
+										{r.comment && (
+											<div className="mt-1">
+												{r.comment}
+											</div>
+										)}
+									</div>
+								</div>
+							))}
+						</div>
+					)}
+
+					{/* Post review form */}
+					<div className="mt-6 p-4 border rounded">
+						<h3 className="font-medium mb-2">Leave a review</h3>
 						{authLoading ? (
-							<div>Checking login...</div>
-						) : currentUser && currentUser.userType === "newbie" ? (
+							<div className="text-sm text-muted-foreground">
+								Checking auth...
+							</div>
+						) : currentUser ? (
 							<>
+								<label className="block mb-1">Rating</label>
+								<Input
+									type="number"
+									value={rating}
+									onChange={(e) =>
+										setRating(Number(e.target.value))
+									}
+									min={0}
+									max={5}
+								/>
+								<label className="block mt-3 mb-1">
+									Comment
+								</label>
 								<Textarea
-									placeholder="Comment (optional)"
 									value={comment}
 									onChange={(e) => setComment(e.target.value)}
 								/>
-								{submitError && (
-									<p className="text-sm text-destructive">
-										{submitError}
-									</p>
-								)}
-								<Button
-									onClick={async () => {
-										setSubmitError(null);
-										try {
-											const res = await fetch(
-												`/api/users/${user.id}/feedback`,
-												{
-													method: "POST",
-													headers: {
-														"Content-Type":
-															"application/json",
-													},
-													body: JSON.stringify({
-														rating,
-														comment,
-													}),
-												}
-											);
-											if (!res.ok) {
-												const d = await res
-													.json()
-													.catch(() => ({}));
-												setSubmitError(
-													d.error ||
-														"Failed to submit"
-												);
-												return;
-											}
-											setRating(5);
-											setComment("");
-										} catch (e) {
-											setSubmitError("Failed to submit");
-										}
-									}}
-								>
-									Submit
-								</Button>
+								<div className="mt-3 flex items-center space-x-2">
+									<Button
+										onClick={handleSubmitReview}
+										disabled={posting}
+									>
+										{posting
+											? "Posting..."
+											: "Submit Review"}
+									</Button>
+									{submitError && (
+										<div className="text-sm text-destructive">
+											{submitError}
+										</div>
+									)}
+								</div>
 							</>
 						) : (
-							<p className="text-sm text-muted-foreground">
-								You must be a General User to leave feedback.
-							</p>
+							<div className="text-sm">
+								You must be signed in to leave a review.
+							</div>
 						)}
 					</div>
-				)}
+				</div>
 			</div>
 		</div>
 	);

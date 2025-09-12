@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import CheckoutModal from "@/components/ui/CheckoutModal";
 
 export default function Page() {
 	const router = useRouter();
@@ -203,55 +204,17 @@ export default function Page() {
 				</div>
 			</div>
 
-			{checkoutOpen && (
-				<div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-					<div className="bg-white p-6 rounded w-96">
-						<h3 className="text-lg font-semibold">Checkout</h3>
-						<div className="mt-3">
-							<label className="block">Name</label>
-							<input
-								placeholder="Name on card"
-								className="w-full border rounded p-2"
-								value={payInfo.name}
-								onChange={(e) =>
-									setPayInfo({
-										...payInfo,
-										name: e.target.value,
-									})
-								}
-							/>
-						</div>
-						<div className="mt-3">
-							<label className="block">Card</label>
-							<input
-								placeholder="Card number"
-								className="w-full border rounded p-2"
-								value={payInfo.card}
-								onChange={(e) =>
-									setPayInfo({
-										...payInfo,
-										card: e.target.value,
-									})
-								}
-							/>
-						</div>
-						<div className="mt-4 flex gap-2 justify-end">
-							<button
-								className="btn"
-								onClick={() => setCheckoutOpen(false)}
-							>
-								Cancel
-							</button>
-							<button
-								className="btn btn-primary"
-								onClick={() => checkout()}
-							>
-								Pay
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			<CheckoutModal
+				open={checkoutOpen}
+				onOpenChange={(v: boolean) => setCheckoutOpen(v)}
+				items={cart}
+				sellerId={cart[0]?.seller}
+				onPaid={() => {
+					setCart([]);
+					// navigate to orders page
+					router.push("/profile/orders");
+				}}
+			/>
 		</div>
 	);
 }
